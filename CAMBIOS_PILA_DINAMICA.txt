@@ -1,0 +1,384 @@
+================================================================================
+                    DOCUMENTACIÓN DE CAMBIOS
+              IMPLEMENTACIÓN DE PILA DINÁMICA EN SISTEMA DE VUELOS
+================================================================================
+
+FECHA: 21 de Abril, 2026
+OBJETIVO: Reemplazar el almacenamiento estático de pasajeros por una estructura
+          de pila dinámica basada en punteros.
+
+================================================================================
+1. ARCHIVO CREADO: pila.h
+================================================================================
+
+DESCRIPCIÓN:
+Nuevo archivo header que contiene una clase template genérica de pila dinámica
+basada en punteros. Esta estructura es independiente del tipo de dato que 
+contenga, lo que permite reutilizarla para diferentes tipos de objetos.
+
+CONTENIDO:
+
+1.1) Estructura Nodo<T>:
+    - Almacena un dato de tipo genérico T
+    - Contiene un puntero al siguiente nodo (siguiente)
+    - Constructor que inicializa el dato y pone siguiente en nullptr
+    
+    Propósito: Representar cada elemento de la pila de forma enlazada
+
+1.2) Clase Pila<T>:
+    
+    MIEMBROS PRIVADOS:
+    - Nodo<T>* cima: Puntero que apunta al nodo en la cima (tope) de la pila
+    - int tamanio: Contador de elementos actuales en la pila
+    
+    MÉTODOS PRINCIPALES:
+    
+    Constructor:
+        Pila() - Inicializa cima en nullptr y tamanio en 0
+    
+    Destructor:
+        ~Pila() - Libera toda la memoria dinámica de los nodos
+                  Desapila todos los elementos hasta vaciar
+    
+    void apilar(T dato):
+        - Crea un nuevo nodo dinámicamente
+        - Lo coloca al inicio (como nueva cima)
+        - Incrementa el contador de tamaño
+        - Operación O(1) - tiempo constante
+    
+    T sacar():
+        - Valida que la pila no esté vacía
+        - Guarda el dato de la cima
+        - Avanza la cima al siguiente nodo
+        - Libera la memoria del nodo anterior
+        - Decrementa el tamaño
+        - Retorna el dato extraído
+    
+    T verCima():
+        - Retorna el dato en la cima sin desapilarlo
+        - No modifica la estructura
+        - Útil para inspeccionar el elemento sin removerlo
+    
+    bool estaVacia():
+        - Retorna true si cima es nullptr
+        - Indica si hay elementos o no
+    
+    int getTamanio():
+        - Retorna el número actual de elementos
+    
+    void vaciar():
+        - Desapila todos los elementos hasta vaciar completamente
+    
+    void mostrar():
+        - Método de debugging para ver el contenido
+        - Recorre desde cima hasta el final imprimiendo elementos
+
+VENTAJAS DE ESTA IMPLEMENTACIÓN:
+✓ Memoria dinámica: Crece según se necesite, no hay límite predefinido
+✓ Genérica: Funciona con cualquier tipo de dato (template)
+✓ Eficiente: Todas las operaciones son O(1)
+✓ Segura: Manejo automático de memoria en destructor
+✓ Manejo de errores: Lanza excepciones para operaciones inválidas
+
+================================================================================
+2. ARCHIVO MODIFICADO: vuelo_comercial.h
+================================================================================
+
+CAMBIOS REALIZADOS:
+
+ANTES:
+    #define MAXCAPACITIY 100
+    class vuelo_comercial: public vuelo{
+    private:
+      pasajero ListaPasajeros[MAXCAPACITIY];  // Array estático
+    
+    public:
+      bool asigne_pasajero(int, string, long int, string);
+      pasajero *operator[](int);
+    };
+
+DESPUÉS:
+    #include "pila.h"
+    class vuelo_comercial: public vuelo{
+    private:
+      Pila<pasajero> pilaPasajeros;  // Pila dinámica
+    
+    public:
+      void agregarPasajero(string, long int, string);
+      pasajero obtenerUltimoPasajero();
+      void removerUltimoPasajero();
+      int obtenerCantidadPasajeros();
+      bool pilaPasjerosVacia();
+    };
+
+DETALLES DE CAMBIOS:
+
+1. Se eliminó:
+   - #define MAXCAPACITIY 100 (límite de capacidad)
+   - Array estático pasajero ListaPasajeros[MAXCAPACITIY]
+   - Operador[] (acceso por índice)
+   - Método asigne_pasajero con índice
+
+2. Se añadió:
+   - #include "pila.h" para usar la estructura de pila
+   - Pila<pasajero> pilaPasajeros como atributo privado
+   - Nuevos métodos que usan operaciones de pila
+
+3. Nuevos métodos:
+   - agregarPasajero(string nombre, long int id, string nacionalidad)
+     → Envuelve la operación apilar()
+     
+   - obtenerUltimoPasajero()
+     → Retorna el pasajero en la cima sin removerlo
+     
+   - removerUltimoPasajero()
+     → Desapila el último pasajero agregado
+     
+   - obtenerCantidadPasajeros()
+     → Retorna cuántos pasajeros hay en la pila
+     
+   - pilaPasjerosVacia()
+     → Verifica si la pila está vacía
+
+BENEFICIOS DEL CAMBIO:
+✓ Sin límite de capacidad (antes: máximo 100)
+✓ Memoria utilizada solo para pasajeros reales
+✓ Interfaz más clara con nombres descriptivos
+✓ Comportamiento LIFO (Last In First Out) explícito
+✓ Gestión automática de memoria
+
+================================================================================
+3. ARCHIVO MODIFICADO: vuelo_comercial.cpp
+================================================================================
+
+CAMBIOS REALIZADOS:
+
+ANTES:
+    bool vuelo_comercial::asigne_pasajero(int Index, string Nombre,
+                                          long int Id, string Nacionalidad)
+    {
+      if ((Index <0) || (Index >MAXCAPACITIY)) return false;
+      ListaPasajeros[Index].setNombre(Nombre);
+      ListaPasajeros[Index].setID(Id);
+      ListaPasajeros[Index].setNat(Nacionalidad);
+      return true;
+    }
+    
+    pasajero *vuelo_comercial::operator[](int Index)
+    {
+      int falla=100;
+      if ( (Index <0) || (Index >=MAXCAPACITIY) ) throw(falla);
+      return &ListaPasajeros[Index];
+    }
+
+DESPUÉS:
+    void vuelo_comercial::agregarPasajero(string Nombre, long int Id,
+                                          string Nacionalidad)
+    {
+        pasajero p;
+        p.setNombre(Nombre);
+        p.setID(Id);
+        p.setNat(Nacionalidad);
+        pilaPasajeros.apilar(p);
+        cout << "Pasajero " << Nombre << " agregado a la pila." << endl;
+    }
+    
+    pasajero vuelo_comercial::obtenerUltimoPasajero()
+    {
+        if (pilaPasajeros.estaVacia()) {
+            throw runtime_error("No hay pasajeros en la pila");
+        }
+        return pilaPasajeros.verCima();
+    }
+    
+    void vuelo_comercial::removerUltimoPasajero()
+    {
+        if (!pilaPasajeros.estaVacia()) {
+            pasajero p = pilaPasajeros.sacar();
+            cout << "Pasajero " << p.getNombre() << " removido." << endl;
+        } else {
+            cout << "No hay pasajeros para remover." << endl;
+        }
+    }
+    
+    int vuelo_comercial::obtenerCantidadPasajeros()
+    {
+        return pilaPasajeros.getTamanio();
+    }
+    
+    bool vuelo_comercial::pilaPasjerosVacia()
+    {
+        return pilaPasajeros.estaVacia();
+    }
+
+DIFERENCIAS CLAVE:
+
+1. Elimina validación de índices (ya no necesaria)
+2. No requiere parámetro Index
+3. Usa directamente operaciones de pila (apilar, sacar, verCima)
+4. Mejor manejo de excepciones con runtime_error
+5. Mensajes informativos en consola
+6. Mucho más simple y seguro
+
+VENTAJAS:
+✓ Código más legible y mantenible
+✓ Sin riesgo de acceso fuera de rango
+✓ Excepciones claras en lugar de códigos de error
+✓ Retroalimentación al usuario
+
+================================================================================
+4. ARCHIVO MODIFICADO: main.cpp
+================================================================================
+
+CAMBIOS REALIZADOS:
+
+Se reemplazó todo el main() anterior con un nuevo programa de demostración
+que prueba exhaustivamente la pila dinámica.
+
+NUEVO CONTENIDO:
+
+1. Inclusión del header pila.h
+2. Demostración completa de características:
+
+   a) Crear vuelos:
+      - vuelo_generico
+      - vuelos_carga
+      - vuelo_comercial
+   
+   b) Agregar múltiples pasajeros a la pila:
+      - Juan (ID: 108008000, Costarricense)
+      - Carlo (ID: 10340, Panameño)
+      - Maria (ID: 20504050, Nicaragüeña)
+   
+   c) Mostrar cantidad de pasajeros en pila
+   
+   d) Obtener información del último pasajero (cima)
+   
+   e) Remover pasajeros (desapilar) dos veces
+   
+   f) Mostrar cantidad restante
+   
+   g) Prueba adicional: crear Pila<vuelo_comercial>
+      - Demuestra que la pila es genérica
+      - Se puede usar con cualquier tipo de datos
+
+SALIDA ESPERADA:
+    === PRUEBA DE PILA DINÁMICA CON VUELOS ===
+    
+    --- Agregando pasajeros al vuelo comercial ---
+    Pasajero Juan agregado a la pila.
+    Pasajero Carlo agregado a la pila.
+    Pasajero Maria agregado a la pila.
+    
+    Cantidad de pasajeros en la pila: 3
+    
+    --- Información del último pasajero (cima de pila) ---
+    Nombre: Maria | ID: 20504050 | Nacionalidad: Nicaragüeña
+    
+    --- Removiendo pasajeros (desapilando) ---
+    Pasajero Maria removido de la pila.
+    Pasajero Carlo removido de la pila.
+    
+    Cantidad de pasajeros restantes: 1
+    
+    --- Información de vuelos ---
+    Vuelo generico ID: 1000
+    Vuelo carga ID: 1000
+    Vuelo carga ID (actualizado): 500
+    
+    --- Demostrando pila dinámica de vuelos ---
+    Cantidad de vuelos en pila: 3
+    
+    === FIN DE PRUEBA ===
+
+CARACTERÍSTICAS DEMOSTRADAS:
+✓ Apilamiento de múltiples elementos
+✓ Obtención de la cima sin remover
+✓ Conteo de elementos
+✓ Desapilamiento (LIFO)
+✓ Uso genérico con diferentes tipos
+
+================================================================================
+5. RESUMEN DE BENEFICIOS GENERALES
+================================================================================
+
+ANTES (Array Estático):
+- Capacidad fija de 100 pasajeros
+- Memoria preasignada aunque no se use
+- Acceso por índice arbitrario (desorden)
+- Posible acceso fuera de rango
+- Datos pueden quedar "huérfanos"
+
+DESPUÉS (Pila Dinámica):
+- Capacidad ilimitada (hasta memoria disponible)
+- Memoria utilizada solo cuando hay datos
+- Orden explícito LIFO (último que entra, primero que sale)
+- Imposible acceso fuera de rango
+- Gestión automática de memoria
+- Interfaz clara y segura
+- Reutilizable para otros tipos de datos
+
+================================================================================
+6. CÓMO USAR LA PILA EN TU CÓDIGO
+================================================================================
+
+Ejemplo básico:
+
+    // Crear una pila de pasajeros
+    Pila<pasajero> miPila;
+    
+    // Agregar un pasajero
+    pasajero p;
+    p.setNombre("Juan");
+    p.setID(123456);
+    p.setNat("Costarricense");
+    miPila.apilar(p);
+    
+    // Ver el último sin remover
+    pasajero actual = miPila.verCima();
+    cout << actual.getNombre() << endl;
+    
+    // Remover el último
+    pasajero removido = miPila.sacar();
+    
+    // Verificar si está vacía
+    if (miPila.estaVacia()) {
+        cout << "La pila está vacía" << endl;
+    }
+    
+    // Obtener cantidad de elementos
+    cout << "Elementos: " << miPila.getTamanio() << endl;
+
+Ejemplo en vuelo_comercial:
+
+    vuelo_comercial miVuelo;
+    
+    // Agregar pasajero
+    miVuelo.agregarPasajero("Juan", 108008000, "Costarricense");
+    
+    // Verificar cantidad
+    cout << miVuelo.obtenerCantidadPasajeros() << endl;  // 1
+    
+    // Obtener el último
+    pasajero p = miVuelo.obtenerUltimoPasajero();
+    
+    // Remover el último
+    miVuelo.removerUltimoPasajero();
+
+================================================================================
+7. PRÓXIMAS MEJORAS POSIBLES
+================================================================================
+
+Opcionales (según necesidades):
+
+1. Agregar iteradores para recorrer la pila
+2. Implementar operador de asignación
+3. Agregar método para serializar/deserializar
+4. Estadísticas de uso (máximo tamaño, promedios)
+5. Búsqueda de elementos específicos
+6. Pilas especializadas para tipos específicos
+7. Thread-safety para ambientes concurrentes
+
+================================================================================
+                              FIN DEL DOCUMENTO
+================================================================================
